@@ -7,6 +7,9 @@ configuration.read("discord.ini")
 
 database = sql.connect(user=configuration.get("login","username"), password=configuration.get("login","password"), host=configuration.get("login","host"), database=configuration.get("login","database"))
 
+moderators = open(configuration.get("locations", "moderators"), 'r')
+modList = moderators.read().split('\n')
+
 #Begin SQL function definitions
 
 async def addCharacter(DiscordUser, BeyondID, CharacterName):
@@ -21,6 +24,12 @@ async def getBeyondNameFromDiscord(DiscordName):
     cursor = database.cursor()
     cursor.execute(query, data)
     return cursor[0]
+
+async def removeCharacter(characterName, BeyondName):
+    query = ("delete from characters where CharName=%s and BeyondOwner=%s")
+    cursor = database.cursor()
+    cursor.execute(query, (characterName, BeyondName))
+
 async def getCharacters():
     query = ("select * from characters") #this query gets every character from the database.
     cursor = database.cursor()
@@ -44,21 +53,23 @@ async def test(message):
 async def uid(message):
     await client.send_message(message.channel,message.author)
 
+async def remove(message, sudoer):
+    charowner = await getBeyondNameFromDiscord(message.author)
+
 
 #End Discord function definitions
 
 CommandsList = {
-            "!test": test,
-            "!uid":uid,
-            "!list":listChars
+            "test": test,
+            "uid":uid,
+            "list":listChars
         }
 
 client = dsc.Client()
 
-commandPrefix = '!'
-
 async def doCommand(message):
-    method = CommandsList.get(message.content)
+    command = message.content.replace(commandPrefix, "")
+    method = CommandsList.get(command)
     await method(message)
 ###Code Below this point shouldn't need to be altered, Ever.
 @client.event
